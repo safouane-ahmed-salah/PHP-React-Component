@@ -33,7 +33,7 @@ Component::registerTag(['newtag1', 'newtag2']); //multiple html tags
 Component::registerTag('newtag3', true); //html tag that does not have child elements
 ```
 
-to render your app
+To render your app
 ```php
 echo new CustomComponent;
 ```
