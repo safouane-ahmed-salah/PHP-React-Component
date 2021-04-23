@@ -43,6 +43,7 @@ echo new CustomComponent;
 we can now have the ability to mimic reactjs state management.
 
 there some slight difference in apply setState as we need to connect js event setState to php component
+
 Note: 
 
 1- make sure the component is wrapped by htmltag (ie: p, div, ...)
