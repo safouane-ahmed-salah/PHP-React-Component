@@ -38,6 +38,36 @@ To render your app
 echo new CustomComponent;
 ```
 
+# Updates
+
+we can now have the ability to mimic reactjs state management.
+
+there some slight difference in apply setState as we need to connect js event setState to php component
+Note: 
+1- make sure the component is wrapped by htmltag (ie: p, div, ...)
+2- make sure you pass $this->id as id attribute of the top html tag
+3- make sure the $this->id is passed as first param of setState; `phpReact.setState(id, state)`
+```php
+class CustomComponent extends Component{
+    var $state = ['test' => 1];
+    
+    function componentDidUpdate($prevState, $currState){} //rener only when there's state update
+    
+    function render(){
+        $test = $this->state['test'];
+        
+        return new div([ 
+            new p('Hello World', ['style'=> 'color:red;background:blue']), 
+            new div('Many div'),
+            new button("set my state ($test)", ['onclick'=> "phpReact.setState('$this->id', {test: ".($test+1)."})"]) //in setState must pass the id
+        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px', 'id'=> $this->id]); //must add id to generated component id
+    }
+}
+```
+
+
+
+
 # Sample full example
 
 ```php
@@ -49,18 +79,25 @@ include_once 'react.php';
 Component::registerTag('safwan');
 
 class CustomComponent extends Component{
+    var $state = ['test' => 1];
+    
+    function componentDidUpdate($prevState, $currState){} //rener only when there's state update
+    
     function render(){
+        $test = $this->state['test'];
+        
         return new div([ 
             new p('Hello World', ['style'=> 'color:red;background:blue']), 
-            new div('Many div') 
-        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px']);
+            new div('Many div'),
+            new button("set my state ($test)", ['onclick'=> "phpReact.setState('$this->id', {test: ".($test+1)."})"]) //in setState must pass the id
+        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px', 'id'=> $this->id]); //must add id to generated component id
     }
 }
 
 class App extends Component{
     function render(){
         $customs = [];
-        for($i=0;$i<10; $i++){
+        for($i=0;$i<3; $i++){
             $customs[] = new CustomComponent;
         }
 
