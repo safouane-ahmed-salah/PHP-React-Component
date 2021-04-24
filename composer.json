@@ -1,5 +1,5 @@
 {
-    "name": "PHPReact/Component",
+    "name": "phpreact/component",
     "type": "library",
     "description": "create web app via php react like component based",
     "keywords": ["React","PHP", "Component"],
