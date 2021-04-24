@@ -53,7 +53,9 @@ abstract class Component{
     }
 
     function __toString(){
-        return ''.$this->render();
+        $components = $this->render();
+        if(!is_array($components)) $components = [$components];
+        return implode('', $components);
     }
 
     function __construct($children = [], $props = []){
