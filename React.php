@@ -33,7 +33,7 @@ abstract class Component{
 
     static function registerTag($tags, $hasNoChild = false){
         self::$htmlTags= array_unique(array_merge(self::$htmlTags, (array)$tags));
-        if($hasNoChild) $this->setHasNoChild($tags); 
+        if($hasNoChild) self::setHasNoChild($tags); 
     }
 
     static function setHasNoChild($tags){
