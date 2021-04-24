@@ -11,5 +11,8 @@
             "email": "safoa14@gmail.com",
             "role": "Developer"
         }
-    ]
+    ],
+    "autoload": {
+        "files": ["React.php"]
+    }
 }
