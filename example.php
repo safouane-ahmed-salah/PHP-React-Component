@@ -5,43 +5,56 @@ use React\Component;
 
 include_once 'React.php';
 
-Component::registerTag('safwan');
-
-class CustomComponent extends Component{
-    var $state = ['test' => 1];
-    
-    function componentDidUpdate($prevState, $currState){
-    }
-    
+class Header extends Component{
     function render(){
-        $test = $this->state['test'];
-        
-        return new div([ 
-            new p('Hello World', ['style'=> 'color:red;background:blue']), 
-            new div('Many div'),
-            new button("set my state ($test)", ['onclick'=> "phpReact.setState('$this->id', {test: ".($test+1)."})"]) 
-        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px', 'id'=> $this->id]);
+        return new div('This is Header', 
+        ['class'=> 'navbar navbar-expand-lg navbar-dark bg-dark p-3 text-white']);
+    }
+}
+class Content extends Component{
+    function render(){
+        return new div(
+                new div(array_map(function(){ 
+                return new div(new Card, ['class' => 'col-md-2 my-2']);
+            }, range(0, 11)), ['class'=> 'row']), 
+        ['class'=> 'container py-2']);
+    }
+}
+
+class Card extends Component{
+    var $state = ['counter' => 1];
+
+    function render(){
+        $counter = $this->state->counter;
+
+        return new div([
+            new div($counter, ['class'=> 'card-body']),
+            new div([
+                new button('update state', [
+                    'onclick'=> 'phpReact.setState("'.$this->id.'", prevState => ({counter: prevState.counter + 1}))',
+                    'class' => 'm-auto btn btn-primary'
+                ]),
+            ], ['class'=> 'card-footer'])
+        ], ['class'=> 'card', 'id'=> $this->id]);
+    }
+}
+
+class Footer extends Component{
+    function render(){
+        return new div('This is Footer', 
+        ['style'=> 'border-top:1px solid;padding:5px;font-size:18px;position:absolute;bottom:0;width:100%']);
     }
 }
 
 class App extends Component{
     function render(){
-        $customs = [];
-        for($i=0;$i<3; $i++){
-            $customs[] = new CustomComponent;
-        }
-
-        return new div([
-            new safwan('Hi I am safwan tag', ['onclick'=> 'alert("hello")']), 
-            new form([
-                new img(['src'=> 'https://image.flaticon.com/icons/png/512/1453/1453608.png']),
-                new select([
-                    new option('hi'),
-                    new option('hello'),
-                ], ['name'=> 'select']),
-                new input(['type'=>'submit'])
-            ])
-        ] + $customs );
+        return [
+            new link(['href'=> 'https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css', 'rel'=> 'stylesheet']),
+            new Header,
+            new Content,
+            new Footer,
+            new script(null,['src'=> 'https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js']),
+        ];
     }
 }
 
