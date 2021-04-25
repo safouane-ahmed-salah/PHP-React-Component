@@ -88,7 +88,7 @@ class CustomComponent extends Component{
     function componentDidUpdate($prevState, $currState){} //rener only when there's state update
     
     function render(){
-        $test = $this->state['test'];
+        $test = $this->state->test;
         
         return new div([ 
             new p('Hello World', ['style'=> 'color:red;background:blue']), 
