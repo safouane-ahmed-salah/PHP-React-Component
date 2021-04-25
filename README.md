@@ -55,7 +55,7 @@ Note:
 class CustomComponent extends Component{
     var $state = ['test' => 1];
     
-    function componentDidUpdate($prevState, $currState){} //rener only when there's state update
+    function componentDidUpdate($prevState, $currState){} //run only when there's state update
     
     function render(){
         $test = $this->state['test'];
