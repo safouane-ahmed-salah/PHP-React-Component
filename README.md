@@ -4,6 +4,9 @@ This project aims to mimic react component in php
 
 it's one of the elegant solution to make component based web app via php
 
+# Installation:
+`composer require phpreact/component`
+
 # Usage:
 
 To create a component you neet to just extend React\Component class
