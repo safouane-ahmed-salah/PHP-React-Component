@@ -97,7 +97,8 @@ abstract class Component{
         $attributes = implode(' ',$attr);
 
         //if theres innerHtml then ignore children else escape any string passed as html 
-        $children = $innerHtml ? [$innerHtml] : array_map(function($v){ return is_string($v) ? htmlspecialchars($v) : $v; }, $this->children);
+        $children = $innerHtml ? [$innerHtml] : 
+            array_map(function($v)use($tag){ return is_string($v) && $tag!='script' ? htmlspecialchars($v) : $v; }, $this->children);
         $children = implode('', $children);
 
         return "<$tag $attributes>$children</$tag>";
