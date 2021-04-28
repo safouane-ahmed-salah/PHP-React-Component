@@ -6,15 +6,14 @@ abstract class Component{
     private static $isTagsSet = false; //flag to track if all html tag classes created
 
     //all html tags that are allowed
-    private static $htmlTags = ['div','p','img','a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre', 'abbr', 'svg', 'g', 'path', 'image', 'circle'];
+    private static $htmlTags = ['div','p','img','a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre'];
     
     private static $hasNoChild = ['img', 'link', 'input', 'meta']; //tags that have no children 
     private const tagNameSpace= 'React\Tag'; //name space for the tags
     
-    private static $counter = 1; // couter for generating sequencial id
+    private static $counter = 1; // counter for generating sequencial id
     protected $id = ''; //the current id of the component
     protected $state = []; //the current state
-    private static $states = []; //used to save all states of every component in the page
 
     /*
         run the first time when first component called 
@@ -30,7 +29,7 @@ abstract class Component{
         self::$isTagsSet = true;
 
         //script tag to setup setState function
-        echo new \React\Tag\script('const phpReact={setState:function(t,e,n){var a=document.getElementById(t);if(a){var r=this.getState(t);"function"==typeof e&&(e=e(r));var o=new XMLHttpRequest;o.onreadystatechange=function(){4==this.readyState&&200==this.status&&(a.outerHTML=this.responseText,"function"==typeof n&&n())},o.open("POST",location.href,!0),o.setRequestHeader("Content-type","application/x-www-form-urlencoded"),o.send("phpreact="+JSON.stringify({id:t,state:e,prevState:r}))}},getState:function(t){try{var e=document.getElementById(t);return JSON.parse(e.getAttribute("prevstate"))}catch(t){return{}}}};');
+        echo new \React\Tag\script('!function(t,e){var n=function(){e.querySelectorAll("[component-id] *:not([component-id])").forEach(function(t){t.setState||(t.getState=i,t.setState=o)})},o=function(t,o){var i=this.closest("[component-id]");if(i){var a=i.getAttribute("component-id"),r=this.getAttribute("key"),c=this.value,s=this.getState();"function"==typeof t&&(t=t(s));var u=new XMLHttpRequest,p={id:a,state:t,prevState:s};u.onreadystatechange=function(){if(4==this.readyState&&200==this.status){if(i.outerHTML=this.responseText,r){var t=e.querySelector("[component-id='"+a+"'] [key='"+r+"']");t&&(t.focus(),c&&(t.value="",t.value=c))}"function"==typeof o&&o(),n()}},u.open("POST",location.href,!0),u.setRequestHeader("Content-type","application/x-www-form-urlencoded"),u.send("phpreact="+JSON.stringify(p))}},i=function(){try{var t=this.closest("[component-id]");return JSON.parse(t.getAttribute("component-state"))}catch(t){return{}}};t.addEventListener("load",n)}(window,document);');
     }
     
     /*
@@ -60,7 +59,7 @@ abstract class Component{
         @param: $hasNoChild: bool if the tags accept no children    
     */
     static function registerTag($tags, $hasNoChild = false){
-        self::$htmlTags= array_unique(array_merge(self::$htmlTags, (array)$tags));
+        self::$htmlTags= array_unique(array_merge(self::$htmlTags, self::parseTags($tags)));
         if($hasNoChild) $this->setHasNoChild($tags); 
     }
 
@@ -69,7 +68,24 @@ abstract class Component{
         @param: $tag: string|array[list of string] html tags   
     */
     static function setHasNoChild($tags){
-        self::$hasNoChild= array_unique(array_merge(self::$hasNoChild, (array)$tags));
+        self::$hasNoChild= array_unique(array_merge(self::$hasNoChild, self::parseTags($tags)));
+    }
+
+    /* 
+        @param: $tags: string|array -- array string to be parse
+        @return: parsed array string
+    */
+    private static function parseTags($tags){
+        return array_map(function($tag){ return self::parseAttribute($tag); }, (array)$tags);
+    }
+
+    /* 
+        allow only [words or dash] for attribute or tag
+        @param: $attr: string -- the string to be parse
+        @return: parsed string
+    */
+    private static function parseAttribute($attr){
+        return preg_replace('/[^\w-]/','', $attr); //allow only [words or dash]
     }
 
     /*
@@ -77,10 +93,6 @@ abstract class Component{
     */
     function render(){
         if(!$this->isHtmlTage()) return '';
-        
-        //save states in dom attribute [prevstate]
-        if($this->props->id && self::$states[$this->props->id]) 
-            $this->props->prevstate = json_encode(self::$states[$this->props->id]);
 
         $tag = $this->getTagName();
         $innerHtml = '';
@@ -89,11 +101,12 @@ abstract class Component{
             if($k == 'dangerouslyInnerHTML'){ //if has dangerouslyInnerHTML attribute
                 $innerHtml = $v; continue;
             } 
-            $att = preg_replace('/[^\w-]/','', $k); //allow only [words or dash]
-            $val = htmlspecialchars($v); //escape html
+            $att = self::parseAttribute($k); //allow only [words or dash]
+            $val = htmlspecialchars( is_object($v) || is_array($v) ? json_encode($v) : $v); //escape html
 
-            $attr[] = "$att='$v'"; 
+            $attr[] = "$att='$val'"; 
         }
+
         $attributes = implode(' ',$attr);
 
         //if theres innerHtml then ignore children else escape any string passed as html 
@@ -110,6 +123,12 @@ abstract class Component{
     */
     function __toString(){
         $components = $this->render();
+
+        //save state of custom component in top html wrapper
+        if(!$this->isHtmlTage() && $components instanceof Component && $components->isHtmlTage()){
+            $components->props = (object)array_merge((array)$components->props, ['component-id'=> $this->id, 'component-state'=> $this->state]);
+        }
+
         if(!is_array($components)) $components = [$components]; //must be list of components
 
         //if custom component the render should return component or list of components
@@ -155,7 +174,6 @@ abstract class Component{
     private function setId(){
         if($this->isHtmlTage()) return;
         $this->id = md5(self::$counter); //generate id
-        self::$states[$this->id] = $this->state; //save all states by id
         self::$counter++;
     }
 
@@ -169,7 +187,6 @@ abstract class Component{
         if(!$post || $post->id != $this->id) return;
         $oldState = $post->prevState;
         $this->state = (object)array_merge((array)$oldState, (array)$post->state);
-        self::$states[$this->id] = $this->state;
         $this->componentDidUpdate($oldState, $this->state); 
         @ob_end_clean();
         die($this);
