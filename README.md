@@ -66,8 +66,8 @@ class CustomComponent extends Component{
         return new div([ 
             new p('Hello World', ['style'=> 'color:red;background:blue']), 
             new div('Many div'),
-            new button("set my state ($test)", ['onclick'=> "phpReact.setState('$this->id', {test: ".($test+1)."})"]) //in setState must pass the id
-        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px', 'id'=> $this->id]); //must add id to generated component id
+            new button("set my state ($test)", ['onclick'=> "this.setState({test: ".($test+1)."})"]) 
+        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px',]); 
     }
 }
 ```
@@ -96,8 +96,8 @@ class CustomComponent extends Component{
         return new div([ 
             new p('Hello World', ['style'=> 'color:red;background:blue']), 
             new div('Many div'),
-            new button("set my state ($test)", ['onclick'=> "phpReact.setState('$this->id', {test: ".($test+1)."})"]) //in setState must pass the id
-        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px', 'id'=> $this->id]); //must add id to generated component id
+            new button("set my state ($test)", ['onclick'=> "this.setState({test: ".($test+1)."})"]) 
+        ], ['style'=> 'border:1px solid #eee;border-radius:4px;max-width:500px;padding:5px;margin:10px',]); //must add id to generated component id
     }
 }
 
