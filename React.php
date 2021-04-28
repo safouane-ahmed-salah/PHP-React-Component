@@ -6,7 +6,7 @@ abstract class Component{
     private static $isTagsSet = false; //flag to track if all html tag classes created
 
     //all html tags that are allowed
-    private static $htmlTags = ['div','p','img','a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre'];
+    private static $htmlTags = ['div','p','img','a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre', 'span', 'i', 'svg', 'path', 'circle', 'g'];
     
     private static $hasNoChild = ['img', 'link', 'input', 'meta']; //tags that have no children 
     private const tagNameSpace= 'React\Tag'; //name space for the tags
@@ -29,7 +29,7 @@ abstract class Component{
         self::$isTagsSet = true;
 
         //script tag to setup setState function
-        echo new \React\Tag\script('!function(t,e){var n=function(){e.querySelectorAll("[component-id] *:not([component-id])").forEach(function(t){t.setState||(t.getState=i,t.setState=o)})},o=function(t,o){var i=this.closest("[component-id]");if(i){var a=i.getAttribute("component-id"),r=this.getAttribute("key"),c=this.value,s=this.getState();"function"==typeof t&&(t=t(s));var u=new XMLHttpRequest,p={id:a,state:t,prevState:s};u.onreadystatechange=function(){if(4==this.readyState&&200==this.status){if(i.outerHTML=this.responseText,r){var t=e.querySelector("[component-id='"+a+"'] [key='"+r+"']");t&&(t.focus(),c&&(t.value="",t.value=c))}"function"==typeof o&&o(),n()}},u.open("POST",location.href,!0),u.setRequestHeader("Content-type","application/x-www-form-urlencoded"),u.send("phpreact="+JSON.stringify(p))}},i=function(){try{var t=this.closest("[component-id]");return JSON.parse(t.getAttribute("component-state"))}catch(t){return{}}};t.addEventListener("load",n)}(window,document);');
+        echo new \React\Tag\script('!function(t,e){var n=function(){e.querySelectorAll("[component-id] *:not([component-id])").forEach(function(t){t.setState||(t.getState=i,t.setState=o)})},o=function(t,o){var i=this.closest("[component-id]");if(i){var a=i.getAttribute("component-id"),r=this.getAttribute("key"),c=(document.activeElement,this.value),s=this.getState();"function"==typeof t&&(t=t(s));var u=new XMLHttpRequest,d={id:a,state:t,prevState:s};u.onreadystatechange=function(){if(4==this.readyState&&200==this.status){if(i.outerHTML=this.responseText,r){var t=e.querySelector("[component-id='"+a+"'] [key='"+r+"']");t&&(t.focus(),c&&(t.value="",t.value=c))}"function"==typeof o&&o(),n()}},u.open("POST",location.href,!0),u.setRequestHeader("Content-type","application/x-www-form-urlencoded"),u.send("phpreact="+JSON.stringify(d))}},i=function(){try{var t=this.closest("[component-id]");return JSON.parse(t.getAttribute("component-state"))}catch(t){return{}}};t.addEventListener("load",n)}(window,document);');
     }
     
     /*
