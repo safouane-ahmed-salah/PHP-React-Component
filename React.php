@@ -6,14 +6,16 @@ abstract class Component{
     private static $isTagsSet = false; //flag to track if all html tag classes created
 
     //all html tags that are allowed
-    private static $htmlTags = ['div','p','img','a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre', 'span', 'i', 'svg', 'path', 'circle', 'g'];
+    private static $htmlTags = ['div','p','img','small', 'a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre', 'span', 'i', 'svg', 'path', 'circle', 'g'];
     
     private static $hasNoChild = ['img', 'link', 'input', 'meta']; //tags that have no children 
     private const tagNameSpace= 'React\Tag'; //name space for the tags
     
-    private static $counter = 1; // counter for generating sequencial id
-    protected $id = ''; //the current id of the component
     protected $state = []; //the current state
+    protected $props = []; //the props
+    protected $children = []; //the children
+    private static $queue = []; //queue of components 
+    private static $isQueued = false;
 
     /*
         run the first time when first component called 
@@ -21,7 +23,7 @@ abstract class Component{
         - setting all tags class component
         - setting the script that controls the state
     */
-    private function setTags(){
+    static function setTags(){
         @ob_start();
         foreach(self::$htmlTags as $el){
             eval("namespace ". self::tagNameSpace ."; class $el extends \React\Component{}");
@@ -29,14 +31,14 @@ abstract class Component{
         self::$isTagsSet = true;
 
         //script tag to setup setState function
-        echo new \React\Tag\script('!function(t,e){var n=function(){e.querySelectorAll("[component-id] *:not([component-id])").forEach(function(t){t.setState||(t.getState=i,t.setState=o)})},o=function(t,o){var i=this.closest("[component-id]");if(i){var a=i.getAttribute("component-id"),r=this.getAttribute("key"),c=(document.activeElement,this.value),s=this.getState();"function"==typeof t&&(t=t(s));var u=new XMLHttpRequest,d={id:a,state:t,prevState:s};u.onreadystatechange=function(){if(4==this.readyState&&200==this.status){if(i.outerHTML=this.responseText,r){var t=e.querySelector("[component-id='"+a+"'] [key='"+r+"']");t&&(t.focus(),c&&(t.value="",t.value=c))}"function"==typeof o&&o(),n()}},u.open("POST",location.href,!0),u.setRequestHeader("Content-type","application/x-www-form-urlencoded"),u.send("phpreact="+JSON.stringify(d))}},i=function(){try{var t=this.closest("[component-id]");return JSON.parse(t.getAttribute("component-state"))}catch(t){return{}}};t.addEventListener("load",n)}(window,document);');
+        echo new \React\Tag\script('!function(t,e){var n=function(){e.querySelectorAll("[component] *").forEach(function(t){t.setState||(t.getState=c,t.setState=o)})},o=function(t,o){var c=this.hasAttribute("component")?this:this.closest("[component]");if(c){var i=[c.getAttribute("component")],r=this.getAttribute("key"),s=(document.activeElement,this.value),a=this.getState();c.querySelectorAll("[component]").forEach(function(t){i.push(t.getAttribute("component"))}),"function"==typeof t&&(t=t(a));var u=new XMLHttpRequest,p={components:i,state:t};u.onreadystatechange=function(){if(4==this.readyState&&200==this.status&&this.responseText){var t,i=e.createElement("div");i.innerHTML=this.responseText,r&&(t=i.querySelector("[key=\'"+r+"\']")),c.replaceWith(i.childNodes[0]),t&&(t.focus(),s&&(t.value="",t.value=s)),"function"==typeof o&&o(),n()}},u.open("POST",location.href,!0),u.setRequestHeader("Content-type","application/x-www-form-urlencoded"),u.send("phpreact="+JSON.stringify(p))}},c=function(){try{var t=this.closest("[component]");return JSON.parse(t.getAttribute("component-state"))}catch(t){return{}}};t.addEventListener("load",n)}(window,document);');
     }
     
     /*
         @return the current component tag name
     */
     protected function getTagName(){
-        return trim(str_replace(self::tagNameSpace, '', get_class($this)), '\\');
+        return strtolower(trim(str_replace(self::tagNameSpace, '', get_class($this)), '\\'));
     }
 
     /*
@@ -76,7 +78,7 @@ abstract class Component{
         @return: parsed array string
     */
     private static function parseTags($tags){
-        return array_map(function($tag){ return self::parseAttribute($tag); }, (array)$tags);
+        return array_map(function($tag){ return strtolower(self::parseAttribute($tag)); }, (array)$tags);
     }
 
     /* 
@@ -117,16 +119,42 @@ abstract class Component{
         return "<$tag $attributes>$children</$tag>";
     }
 
+    private function getQueueComponent(){
+        $encode = array_shift(self::$queue);
+        return $encode ? unserialize(base64_decode($encode)) : null;
+    }
+
+    private function stateManager(){
+        $component = null;
+
+        if(!self::$queue && !self::$isQueued){
+            if($this->isHtmlTage()) return '';
+            $post = json_decode($_POST['phpreact']);
+            self::$queue = $post->components;
+            self::$isQueued = true;
+            $component = $this->getQueueComponent();
+            $oldState = $component->state;
+            $component->state = (object)array_merge((array)$oldState, (array)$post->state);
+            $component->componentDidUpdate($oldState, $component->state);
+        }elseif(!$this->isHtmlTage()){
+            $component = $this->getQueueComponent();
+        }
+
+        if(!$component) $component = $this;
+
+        return $component->handleRender();
+    }
+
     /*
         parse the components to html
         @return: html string 
     */
-    function __toString(){
+    private function handleRender(){
         $components = $this->render();
 
         //save state of custom component in top html wrapper
         if(!$this->isHtmlTage() && $components instanceof Component && $components->isHtmlTage()){
-            $components->props = (object)array_merge((array)$components->props, ['component-id'=> $this->id, 'component-state'=> $this->state]);
+            $components->props = (object)array_merge((array)$components->props, ['component'=> base64_encode(serialize($this)), 'component-state'=> $this->state]);
         }
 
         if(!is_array($components)) $components = [$components]; //must be list of components
@@ -138,6 +166,14 @@ abstract class Component{
     }
 
     /*
+        parse the components to html
+        @return: html string 
+    */
+    function __toString(){
+        return empty($_POST['phpreact']) ? $this->handleRender() : $this->stateManager();
+    }
+
+    /*
         construct the tag with list of child component and props 
         @param: $children: component|array[of component]  
         @param: $props: associative array of key=> value
@@ -145,19 +181,15 @@ abstract class Component{
         @usage: Component($children, $props) or Component($props) if exists in hasNoChild 
     */
     function __construct($children = [], $props = []){
-        if(!self::$isTagsSet) $this->setTags();
+        if(!self::$isTagsSet) self::setTags();
         $hasNoChild = $this->hasNoChild();
-        $this->setId();
 
         if(!is_array($children)) $children = [$children];
 
         //set properties
-        $this->props = (object)($hasNoChild ? $children : $props);
+        $this->props = (object)array_merge((array)$this->props, $hasNoChild ? $children : $props);
         $this->children = $hasNoChild ? [] : $children;
         $this->state = (object)$this->state;
-
-        //listen to state change
-        $this->setStateListener();
     }
 
     /*
@@ -166,29 +198,4 @@ abstract class Component{
         @param: $currentState: [object] the current state
     */
     function componentDidUpdate($oldState, $currentState){}
-
-    /*
-        set unique id of each custom component
-        it's used to check against when state updated
-    */
-    private function setId(){
-        if($this->isHtmlTage()) return;
-        $this->id = md5(self::$counter); //generate id
-        self::$counter++;
-    }
-
-    /*
-        ajax listner of state update
-        ajax posts 'phpreact' with json that has attributes [id: component id, state: the new state, prevState: the current state];
-    */
-    private function setStateListener(){
-        if(empty($_POST['phpreact'])) return;
-        $post = json_decode($_POST['phpreact']);
-        if(!$post || $post->id != $this->id) return;
-        $oldState = $post->prevState;
-        $this->state = (object)array_merge((array)$oldState, (array)$post->state);
-        $this->componentDidUpdate($oldState, $this->state); 
-        @ob_end_clean();
-        die($this);
-    }
 }
