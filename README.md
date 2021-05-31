@@ -46,13 +46,8 @@ we can now have the ability to mimic reactjs state management.
 
 there some slight difference in apply setState as we need to connect js event setState to php component
 
-Note: 
+Note: make sure the component is wrapped by htmltag (ie: p, div, ...)
 
-1- make sure the component is wrapped by htmltag (ie: p, div, ...)
-
-2- make sure you pass $this->id as id attribute of the top html tag
-
-3- make sure the $this->id is passed as first param of setState; `phpReact.setState(id, state)`
 ```php
 class CustomComponent extends Component{
     var $state = ['test' => 1];
@@ -60,7 +55,7 @@ class CustomComponent extends Component{
     function componentDidUpdate($prevState, $currState){} //run only when there's state update
     
     function render(){
-        $test = $this->state['test'];
+        $test = $this->state->test;
         
         return new div([ 
             new p('Hello World', ['style'=> 'color:red;background:blue']), 
