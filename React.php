@@ -1,107 +1,217 @@
 <?php
+/**
+ * Class description
+ *
+ * @author  Safouane Ahmed Salah
+ * @license MIT 
+ */
 
 namespace React;
 
 abstract class Component{
-    private static $isTagsSet = false; //flag to track if all html tag classes created
 
-    //all html tags that are allowed
-    private static $htmlTags = ['div','p','img','small', 'a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre', 'span', 'i', 'svg', 'path', 'circle', 'g'];
-    
-    private static $hasNoChild = ['img', 'link', 'input', 'meta']; //tags that have no children 
-    private const tagNameSpace= 'React\Tag'; //name space for the tags
-    
-    protected $state = []; //the current state
-    protected $props = []; //the props
-    protected $children = []; //the children
-    private static $queue = []; //queue of components 
-    private static $isQueued = false;
-
-    /*
-        run the first time when first component called 
-        responsible for:
-        - setting all tags class component
-        - setting the script that controls the state
+    /**
+     * List of the known html tags
+     *
+     * @var array
     */
-    static function setTags(){
-        @ob_start();
+    private static $htmlTags = ['div','p','img','small', 'a','ul','li', 'h1','h2','h3','h4','h5','h6','iframe','article', 'section', 'form','input','textarea','select','option', 'link', 'script', 'button', 'nav', 'title', 'meta', 'code', 'pre', 'span', 'i', 'svg', 'path', 'circle', 'g', 'header', 'b', 'style', 'figure', 'figcaption', 'video', 'audio'];
+    
+    /**
+     * Namespace for the class that represents html tag
+     *
+     * @var string
+    */
+    private const tagNameSpace= 'React\Tag'; 
+    
+    /**
+     * Associative array that holds the state of components
+     *
+     * @var array
+    */
+    protected $state = []; 
+
+    /**
+     * Associative array that holds the props passed to components
+     *
+     * @var array
+    */
+    protected $props = []; 
+
+    /**
+     * List of child components
+     *
+     * @var array
+    */
+    protected $children = [];
+
+    /**
+     * the queue that holds all previous component
+     * used for registering the previous states
+     * 
+     * @var array
+    */
+    private static $queue = []; //queue of components 
+    
+    /**
+     * A flag that indicates when the queue is already set
+     * 
+     * @var bool
+    */
+    private static $isQueued = false; 
+
+    /**
+     * the post object when state is changes
+     * 
+     * @var object
+    */
+    private static $post; 
+    
+    /**
+     * List of already imported css and js files
+     * 
+     * @var array
+    */
+    private static $imported = [];
+
+    /** 
+     * run the first time when first component called 
+     * responsible for:
+     *  - setting all tags class component
+     *  - setting the script that controls the state
+     * 
+     * @return void
+    */
+    static function setTags(): void {
+        if(self::issetTags()) return;
+        
         foreach(self::$htmlTags as $el){
             eval("namespace ". self::tagNameSpace ."; class $el extends \React\Component{}");
         }
-        self::$isTagsSet = true;
+
+        self::$post = json_decode(@$_POST['phpreact']);
 
         //script tag to setup setState function
-        echo new \React\Tag\script('!function(t,e){var n=function(){e.querySelectorAll("[component] *").forEach(function(t){t.setState||(t.getState=c,t.setState=o)})},o=function(t,o){var c=this.hasAttribute("component")?this:this.closest("[component]");if(c){var i=[c.getAttribute("component")],r=this.getAttribute("key"),s=(document.activeElement,this.value),a=this.getState();c.querySelectorAll("[component]").forEach(function(t){i.push(t.getAttribute("component"))}),"function"==typeof t&&(t=t(a));var u=new XMLHttpRequest,p={components:i,state:t};u.onreadystatechange=function(){if(4==this.readyState&&200==this.status&&this.responseText){var t,i=e.createElement("div");i.innerHTML=this.responseText,r&&(t=i.querySelector("[key=\'"+r+"\']")),c.replaceWith(i.childNodes[0]),t&&(t.focus(),s&&(t.value="",t.value=s)),"function"==typeof o&&o(),n()}},u.open("POST",location.href,!0),u.setRequestHeader("Content-type","application/x-www-form-urlencoded"),u.send("phpreact="+JSON.stringify(p))}},c=function(){try{var t=this.closest("[component]");return JSON.parse(t.getAttribute("component-state"))}catch(t){return{}}};t.addEventListener("load",n)}(window,document);');
+        self::import('phpreact.js');
+    }
+
+    /**  
+     * check if the classes created of correspendent tags
+     * 
+     * @return bool 
+    */
+    static function issetTags(): bool {
+        return empty(self::$htmlTags) || class_exists(self::tagNameSpace. '\\' .self::$htmlTags[0]);
     }
     
-    /*
-        @return the current component tag name
+    /** 
+     * Get the current component tag name
+     * 
+     * @return string 
     */
-    protected function getTagName(){
+    protected function getTagName(): string {
         return strtolower(trim(str_replace(self::tagNameSpace, '', get_class($this)), '\\'));
     }
 
-    /*
-        @return check if the current component is html tag
+    /**
+     * check if the current component is html tag
+     * 
+     *  @return bool 
     */
-    protected function isHtmlTage(){
+    protected function isHtmlTag(): bool {
         return in_array($this->getTagName(), self::$htmlTags);
     }
 
-    /*
-        @return check if the current component is has no children
+    /**
+     * register custom html tag
+     * 
+     * @param string|array $tags one or list of custom html tags   
+     * 
+     * @return void
     */
-    protected function hasNoChild(){
-        return in_array($this->getTagName(), self::$hasNoChild);
-    }
-
-    /*
-        register custom html tag
-        @param: $tag: string|array[list of string] html tags
-        @param: $hasNoChild: bool if the tags accept no children    
-    */
-    static function registerTag($tags, $hasNoChild = false){
+    static function registerTag(mixed $tags): void {
         self::$htmlTags= array_unique(array_merge(self::$htmlTags, self::parseTags($tags)));
-        if($hasNoChild) $this->setHasNoChild($tags); 
     }
 
-    /*
-        set the custom tags that has no children
-        @param: $tag: string|array[list of string] html tags   
+    /**
+     * parsed html string
+     * rule: lowercase and remove whitespace and specialchars
+     * 
+     *  @param  string|array $tags one or list of custom html tags to be parse
+     *  @return array 
     */
-    static function setHasNoChild($tags){
-        self::$hasNoChild= array_unique(array_merge(self::$hasNoChild, self::parseTags($tags)));
-    }
-
-    /* 
-        @param: $tags: string|array -- array string to be parse
-        @return: parsed array string
-    */
-    private static function parseTags($tags){
+    private static function parseTags(mixed $tags) : array {
         return array_map(function($tag){ return strtolower(self::parseAttribute($tag)); }, (array)$tags);
     }
 
-    /* 
-        allow only [words or dash] for attribute or tag
-        @param: $attr: string -- the string to be parse
-        @return: parsed string
+    /**  
+     * Parse html attribute
+     * allow only [words or dash] for attribute or tag
+     * 
+     * @param string $attr the string to be parse
+     * @return string
     */
-    private static function parseAttribute($attr){
+    private static function parseAttribute(string $attr): string { 
         return preg_replace('/[^\w-]/','', $attr); //allow only [words or dash]
     }
 
-    /*
-        render the html tag only
+    /**  
+     * Check if the render is for updating a state
+     * 
+     * @return bool
+    */
+    private static function isSetState(): bool{
+        return !!self::$post;
+    }
+
+    /**  
+     * Import the assets you need 
+     * 
+     * @param string $file url or relative path to file
+     * @return void
+    */
+    static function import(string $file): void{
+        if(self::isSetState() || !self::issetTags()) return;
+
+        $headers = @get_headers($file);
+        //if url 
+        if(strpos(@$headers[0],'200')!==false){
+            $uri = $file;
+        }else{
+            $bt =  debug_backtrace();
+            $dir =  dirname($bt[0]['file']);
+            $realpath = realpath($dir.'/'. $file);
+            if(!file_exists($realpath)) return;
+            $uri = str_replace($_SERVER['DOCUMENT_ROOT'], '', $realpath);
+        }
+
+        if(in_array($uri, self::$imported)) return;
+        self::$imported[] = $uri;
+
+        $ext = strtolower(pathinfo($uri, PATHINFO_EXTENSION));
+        switch($ext){
+            case 'css':
+                echo new \React\Tag\link(['href'=> $uri, 'rel'=> 'stylesheet']); break;
+            case 'js':
+                echo new \React\Tag\script(null,['src'=> $uri, 'defer'=> 'true']); break;
+        }
+    }
+
+    /**  
+     * Render the class that represent the html tag
+     * 
+     * @return string
     */
     function render(){
-        if(!$this->isHtmlTage()) return '';
+        if(!$this->isHtmlTag()) return '';
 
         $tag = $this->getTagName();
         $innerHtml = '';
         $attr = []; 
         foreach($this->props as $k=> $v){ 
             if($k == 'dangerouslyInnerHTML'){ //if has dangerouslyInnerHTML attribute
-                $innerHtml = $v; continue;
+                $innerHtml = $v; 
+                continue;
             } 
             $att = self::parseAttribute($k); //allow only [words or dash]
             $val = htmlspecialchars( is_object($v) || is_array($v) ? json_encode($v) : $v); //escape html
@@ -119,24 +229,33 @@ abstract class Component{
         return "<$tag $attributes>$children</$tag>";
     }
 
-    private function getQueueComponent(){
+    /**  
+     * Retrieve the component from the queue
+     * 
+     * @return Component
+    */
+    private function getQueueComponent(): Component {
         $encode = array_shift(self::$queue);
         return $encode ? unserialize(base64_decode($encode)) : null;
     }
 
-    private function stateManager(){
+    /**  
+     * Render the update state
+     * 
+     * @return string
+    */
+    private function stateManager(): string {
         $component = null;
 
         if(!self::$queue && !self::$isQueued){
-            if($this->isHtmlTage()) return '';
-            $post = json_decode($_POST['phpreact']);
+            $post = self::$post;
             self::$queue = $post->components;
             self::$isQueued = true;
             $component = $this->getQueueComponent();
             $oldState = $component->state;
             $component->state = (object)array_merge((array)$oldState, (array)$post->state);
             $component->componentDidUpdate($oldState, $component->state);
-        }elseif(!$this->isHtmlTage()){
+        }elseif(!$this->isHtmlTag()){
             $component = $this->getQueueComponent();
         }
 
@@ -145,57 +264,84 @@ abstract class Component{
         return $component->handleRender();
     }
 
-    /*
-        parse the components to html
-        @return: html string 
+    /**  
+     * Convert a Component to html string 
+     * 
+     * @return string
     */
-    private function handleRender(){
+    private function handleRender(): string {
         $components = $this->render();
 
         //save state of custom component in top html wrapper
-        if(!$this->isHtmlTage() && $components instanceof Component && $components->isHtmlTage()){
+        if(!$this->isHtmlTag() && $components instanceof Component && $components->isHtmlTag()){
             $components->props = (object)array_merge((array)$components->props, ['component'=> base64_encode(serialize($this)), 'component-state'=> $this->state]);
         }
 
         if(!is_array($components)) $components = [$components]; //must be list of components
 
         //if custom component the render should return component or list of components
-        if(!$this->isHtmlTage()) $components = array_filter($components, function($v){ return $v instanceof Component; });
+        if(!$this->isHtmlTag()) $components = array_filter($components, function($v){ return $v instanceof Component; });
         
         return implode('', $components);
     }
 
-    /*
-        parse the components to html
-        @return: html string 
+    /**  
+     * Convert a component to html string 
+     * 
+     * @return string
     */
-    function __toString(){
-        return empty($_POST['phpreact']) ? $this->handleRender() : $this->stateManager();
+    function __toString(): string {
+        return self::isSetState() ? $this->stateManager() : $this->handleRender();
     }
 
-    /*
-        construct the tag with list of child component and props 
-        @param: $children: component|array[of component]  
-        @param: $props: associative array of key=> value
-        
-        @usage: Component($children, $props) or Component($props) if exists in hasNoChild 
+    /**  
+     * Check if array is associative array 
+     * 
+     * @return bool
     */
-    function __construct($children = [], $props = []){
-        if(!self::$isTagsSet) self::setTags();
-        $hasNoChild = $this->hasNoChild();
+    private function isProps(array $array): bool{
+        return !empty($array) && array_keys($array) !== range(0, count($array) - 1);
+    }
+
+    /**  
+     * Construct the tag with list of child component and props 
+     * 
+     * 2 possible usage: Component($children, $props) or Component($props)  
+     * 
+     * @param string|array|Component $children 
+     *  1- string|[string] allowed only if html tag
+     *  2- associative array then it will be considered props
+     *  3- Component|[Component] 
+     * @param array $props associative array of key=> value
+     * 
+    */
+    function __construct($children = [], array $props = []){
+        self::setTags();
 
         if(!is_array($children)) $children = [$children];
 
+        $isProps = $this->isProps($children);
+
         //set properties
-        $this->props = (object)array_merge((array)$this->props, $hasNoChild ? $children : $props);
-        $this->children = $hasNoChild ? [] : $children;
+        $this->props = (object)array_merge((array)$this->props, $isProps ? $children : $props);
+        $this->children = $isProps ? [] : $children;
         $this->state = (object)$this->state;
     }
 
-    /*
-        run only when state has been updated
-        @param: $oldState: [object] the previous state
-        @param: $currentState: [object] the current state
+    /** 
+     * Hook when state is changed
+     * 
+     * @param object $oldState  the previous state 
+     * @param object $currentState the current state
+     * 
+     * @return void 
     */
     function componentDidUpdate($oldState, $currentState){}
+
+    /** 
+     * Hook before rendering the component
+     * 
+     * @return void 
+    */
+    function beforeRender(){}
 }
