@@ -33,7 +33,6 @@ you just call a static function registerTag
 ```php
 Component::registerTag('tag1');
 Component::registerTag(['newtag1', 'newtag2']); //multiple html tags
-Component::registerTag('newtag3', true); //html tag that does not have child elements
 ```
 
 To render your app
