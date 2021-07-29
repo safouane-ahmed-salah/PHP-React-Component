@@ -13,6 +13,6 @@
         }
     ],
     "autoload": {
-        "files": ["React.php"]
+        "files": ["React.php","Component.php","Tag.php","Func.php"]
     }
 }
