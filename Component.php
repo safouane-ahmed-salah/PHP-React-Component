@@ -47,7 +47,7 @@ abstract class Component extends React{
         self::$post = json_decode(@$_POST['phpreact']);
 
         //script tag to setup setState function
-        self::import('phpreact.js');
+        self::import('phpreact.min.js');
     }
 
     /**  
