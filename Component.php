@@ -25,29 +25,21 @@ abstract class Component extends React{
     */
     private static $queue = []; //queue of components 
     
-    /**
-     * A flag that indicates when the queue is already set
-     * 
-     * @var bool
-    */
-    private static $isQueued = false; 
 
     /**
      * the post object when state is changes
      * 
      * @var object
     */
-    private static $post; 
+    private static $isSetState = false; 
 
     /** 
      * Setup the javascript of handling state
      * 
     */
     static function setup(): void {
-        self::$post = json_decode(@$_POST['phpreact']);
-
         //script tag to setup setState function
-        self::import('phpreact.min.js');
+        self::import('phpreact.js', '1.3');
     }
 
     /**  
@@ -56,7 +48,31 @@ abstract class Component extends React{
      * @return bool
     */
     static function isSetState(): bool{
-        return !!self::$post;
+        return self::$isSetState;
+    }
+
+    static function renderState(){
+        $post = json_decode(@$_POST['phpreact']);
+        if(!$post) return;
+        self::$isSetState = true;
+        self::$queue = $post->components;
+        $component = self::decode($post->current);
+        $oldState = $component->state;
+        $component->state = (object)array_merge((array)$oldState, (array)$post->state);
+        $component->componentDidUpdate($oldState, $component->state);
+        return $component->handleRender();
+    }
+
+    private static function decode(string $encode){
+        $arr = json_decode(base64_decode($encode));
+        include_once $arr->file;
+        return unserialize($arr->component);
+    }
+
+    private function encode(){
+        $ref = $this instanceof Func ? new \ReflectionFunction(get_class($this)) :  new \ReflectionClass($this);
+        $file = $ref->getFileName();
+        return base64_encode(json_encode(['file'=> $file, 'component'=> serialize($this)]));
     }
 
     /**  
@@ -66,7 +82,7 @@ abstract class Component extends React{
     */
     private function getQueueComponent(){
         $encode = array_shift(self::$queue);
-        return $encode ? unserialize(base64_decode($encode)) : null;
+        return $encode ? self::decode($encode) : null;
     }
 
     /**  
@@ -75,22 +91,8 @@ abstract class Component extends React{
      * @return string
     */
     private function stateManager(): string {
-        $component = null;
-
-        if(!self::$isQueued){
-            $post = self::$post;
-            self::$queue = $post->components;
-            self::$isQueued = true;
-            $component = $this->getQueueComponent();
-            $oldState = $component->state;
-            $component->state = (object)array_merge((array)$oldState, (array)$post->state);
-            $component->componentDidUpdate($oldState, $component->state);
-        }else{
-            $component = $this->getQueueComponent();
-        }
-
+        $component = $this->getQueueComponent();
         if(!$component) $component = $this;
-
         return $component->handleRender();
     }
 
@@ -104,7 +106,8 @@ abstract class Component extends React{
         $components = $this->render();
 
         if((array)$this->state && $components instanceof Tag){
-            $componentProps =  ['component'=> base64_encode(serialize($this)), 'component-state'=> $this->state];
+            // $componentProps =  ['component'=> base64_encode(serialize($this)), 'component-state'=> $this->state];
+            $componentProps =  ['component'=> $this->encode(), 'component-state'=> $this->state];
             $components->props = (object)array_merge((array)$components->props,$componentProps);
         }
 

@@ -69,6 +69,7 @@ abstract class React{
      * @param string $class_name
     */
     static function register_class($class_name){
+        self::setup();
         $isTag = Tag::isValid($class_name);
         if(!$isTag && !function_exists($class_name)) return;
 
@@ -187,8 +188,6 @@ abstract class React{
      * 
     */
     function __construct($args = [], $children = []){
-        self::setup();
-
         if(!is_array($args)) $args = [$args];
         if(!is_array($children)) $children = [$children];
 
